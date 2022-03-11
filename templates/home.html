@@ -4,10 +4,83 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-    <title>Home Page</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Bink Platform Dashboard</title>
 </head>
 <body>
-    <h1>Title</h1>
+    <h1 class="title_big" style="text-align: center">Bink Platform Dashboard</h1>
+    <br>
+    <div class="wrapper">
+        <div class="one">Total Bink Native Users</div>
+        <div class="two">Total Barclays Users</div>
+        <div class="three">
+            <canvas id="dailyUsers" width="1024" height="576">
+                <script>
+                    var ctx = document.getElementById("dailyUsers").getContext("2d");
+                    var dailyUsers = new Chart(ctx, {
+                        type:"line",
+                        data: {
+                            labels: {{ labels | safe}},
+                            datasets: [
+                                {
+                                    label: "Bink",
+                                    data: {{ bink | safe}},
+                                    borderColor: "pink",
+                                    backgroundColor: "pink",
+                                    borderWidth:1,
+                                    lineTension:0.1,
+                                    fill: false,
+                                    pointRadius:1.0,
+                                    yAxisID: 'bink'
+                                },
+                                {
+                                    label: "Barclays",
+                                    data: {{ barclays | safe}},
+                                    borderColor: "green",
+                                    backgroundColor: "green",
+                                    borderWidth:1,
+                                    lineTension:0.1,
+                                    fill: false,
+                                    pointRadius:1.0,
+                                    yAxisID: 'barclays'
+                                }
+                            ]
+                        },
+                        options: {
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Daily Users Joined'
+                                }
+                            },
+                            responsive: false,
+                            scales: {
+                                bink: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                    title: 'Bink',
+                                    grid: {
+                                        drawOnChartArea: false
+                                    }
+                                },
+                                barclays: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'right',
+                                    title: 'Barclays'
+                                }
+                            }
+                        }
+                    });
+                </script>
+            </canvas>
+        </div>
+      </div>
+      
+    <br>
+    
 </body>
 </html>
