@@ -10,14 +10,23 @@
     <title>Bink Platform Dashboard</title>
 </head>
 <body>
-    <h1 class="title_big" style="text-align: center">Bink Platform Dashboard</h1>
+    <h1 class="title title_big" style="text-align: center">Bink Platform Dashboard</h1>
     <br>
     <div class="wrapper">
-        <div class="one">Total Bink Native Users</div>
-        <div class="two">Total Barclays Users</div>
+        <div class="one">
+            <h2>Bink Native Users</h2>
+            <h3>{{ bink_users }}</h3>
+        </div>
+        <div class="two">
+            <h2>Total Barclays Users</h2>
+            <h3>{{ barclays_users }}</h3>
+        </div>
         <div class="three">
             <canvas id="dailyUsers" width="1024" height="576">
                 <script>
+                    Chart.defaults.font.family = "'Roboto', 'sans-serif'";
+                    var bink_col = 'rgba(67, 128, 134, 1)'
+                    var barclays_col = 'rgba(0, 174, 239, 1)'
                     var ctx = document.getElementById("dailyUsers").getContext("2d");
                     var dailyUsers = new Chart(ctx, {
                         type:"line",
@@ -27,23 +36,23 @@
                                 {
                                     label: "Bink",
                                     data: {{ bink | safe}},
-                                    borderColor: "pink",
-                                    backgroundColor: "pink",
-                                    borderWidth:1,
-                                    lineTension:0.1,
+                                    borderColor: bink_col,
+                                    backgroundColor: bink_col,
+                                    borderWidth:1.5,
+                                    lineTension:0.15,
                                     fill: false,
-                                    pointRadius:1.0,
+                                    pointRadius:2,
                                     yAxisID: 'bink'
                                 },
                                 {
                                     label: "Barclays",
                                     data: {{ barclays | safe}},
-                                    borderColor: "green",
-                                    backgroundColor: "green",
-                                    borderWidth:1,
-                                    lineTension:0.1,
+                                    borderColor: barclays_col,
+                                    backgroundColor: barclays_col,
+                                    borderWidth:1.5,
+                                    lineTension:0.15,
                                     fill: false,
-                                    pointRadius:1.0,
+                                    pointRadius:2.0,
                                     yAxisID: 'barclays'
                                 }
                             ]
