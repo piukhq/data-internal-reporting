@@ -5,8 +5,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}"> -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <title>Bink Platform Dashboard</title>
 </head>
 <body>
@@ -18,17 +19,17 @@
             <h3>{{ bink_users }}</h3>
         </div>
         <div class="two">
-            <h2>Total Barclays Users</h2>
+            <h2>Barclays Users</h2>
             <h3>{{ barclays_users }}</h3>
         </div>
         <div class="three">
             <canvas id="dailyUsers" width="1024" height="576">
                 <script>
                     Chart.defaults.font.family = "'Roboto', 'sans-serif'";
-                    var bink_col = 'rgba(67, 128, 134, 1)'
-                    var barclays_col = 'rgba(0, 174, 239, 1)'
-                    var ctx = document.getElementById("dailyUsers").getContext("2d");
-                    var dailyUsers = new Chart(ctx, {
+                    const bink_col = 'rgba(67, 128, 134, 1)'
+                    const barclays_col = 'rgba(0, 174, 239, 1)'
+                    const ctx = document.getElementById("dailyUsers").getContext("2d");
+                    const dailyUsers = new Chart(ctx, {
                         type:"line",
                         data: {
                             labels: {{ labels | safe}},
@@ -66,11 +67,21 @@
                             },
                             responsive: false,
                             scales: {
+                                x: {
+                                    type: 'time',
+                                    time: {
+                                        unit: 'month',
+                                        tooltipFormat: 'EEEE, dd-MM-yyyy'
+                                    }
+                                },
                                 bink: {
                                     type: 'linear',
                                     display: true,
                                     position: 'left',
-                                    title: 'Bink',
+                                    title: {
+                                        display: true,
+                                        text: 'Bink'
+                                    },
                                     grid: {
                                         drawOnChartArea: false
                                     }
@@ -79,7 +90,10 @@
                                     type: 'linear',
                                     display: true,
                                     position: 'right',
-                                    title: 'Barclays'
+                                    title: {
+                                        display: true,
+                                        text: 'Barclays'
+                                    },                                
                                 }
                             }
                         }
@@ -88,8 +102,6 @@
             </canvas>
         </div>
       </div>
-      
     <br>
-    
 </body>
 </html>

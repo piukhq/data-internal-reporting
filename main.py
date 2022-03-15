@@ -25,7 +25,8 @@ def home():
         LEFT JOIN
             ubiquity_serviceconsent ON \"user\".id = ubiquity_serviceconsent.user_id
         WHERE
-            name = \'Bink\' OR name = \'Barclays Mobile Banking\'
+            (name = \'Bink\' OR name = \'Barclays Mobile Banking\') AND 
+            date_joined < CURRENT_DATE
         GROUP BY
             date_joined::DATE,
             name,
@@ -38,7 +39,7 @@ def home():
     df = df.drop('consent',axis=1).groupby(['date_joined','name']).agg({'users':'sum'}).reset_index().pivot(index='date_joined',columns='name',values='users').fillna(0).reset_index()
     day = (datetime.today() - timedelta(days=60)).strftime('%Y/%m/%d')
     df = df[pd.to_datetime(df['date_joined']) >= day]
-    labels = list(set(df['date_joined'].astype(str).tolist()))
+    labels = df['date_joined'].astype(str).tolist()
     bink = df['Bink'].astype(str).tolist()
     barclays = df['Barclays Mobile Banking'].astype(str).tolist()
     return render_template('home.html', labels=labels,bink=bink,barclays=barclays,bink_users=bink_users,barclays_users=barclays_users)
