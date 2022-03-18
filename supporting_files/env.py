@@ -1,0 +1,6 @@
+hostref="bink-uksouth-tableau.postgres.database.azure.com"
+databasenameref="hermes"
+databasenamerefharm="harmonia"
+usernameref="dogfish"
+passwordref="BKlXaolxX1LfENcifzygI6WP"
+portref="5432"
