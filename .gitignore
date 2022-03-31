@@ -188,4 +188,4 @@ cython_debug/
 #.idea/
 
 #Enviroment files ignored
-supporting_files/env.py
+env.py
