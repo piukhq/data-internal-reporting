@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}"> -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/chart.js-plugin-labels-dv/dist/chartjs-plugin-labels.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <title>Bink Platform Dashboard</title>
 </head>
@@ -23,12 +24,15 @@
             <h3>{{ barclays_users }}</h3>
         </div>
         <div class="three">
-            <canvas id="dailyUsers" width="1024" height="576">
+            <canvas id="dailyUsers" width="1024" height="256"><!-- 576 -->
                 <script>
                     Chart.defaults.font.family = "'Roboto', 'sans-serif'";
                     const bink_col = 'rgba(67, 128, 134, 1)'
-                    const barclays_col = 'rgba(0, 174, 239, 1)'
+                    const barclays_col = 'rgba(0, 174, 239, 1)'                
                     const ctx = document.getElementById("dailyUsers").getContext("2d");
+                    const totalDuration = 1000;
+                    const delayBetweenPoints = totalDuration / {{ labels | safe}}.length;
+                    const previousY = (ctx) => ctx.index === 0 ? ctx.chart.scales.y.getPixelForValue(100) : ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.index - 1].getProps(['y'], true).y;
                     const dailyUsers = new Chart(ctx, {
                         type:"line",
                         data: {
@@ -95,7 +99,119 @@
                                         text: 'Barclays'
                                     },                                
                                 }
+                            },
+                        },
+                        animation: {
+                            x: {
+                                type: 'time',
+                                easing: 'linear',
+                                duration: delayBetweenPoints,
+                                from: NaN, // the point is initially skipped
+                                delay(ctx) {
+                                if (ctx.type !== 'data' || ctx.xStarted) {
+                                    return 0;
+                                }
+                                ctx.xStarted = true;
+                                return ctx.index * delayBetweenPoints;
+                                }
+                            },
+                            y: {
+                                type: 'number',
+                                easing: 'linear',
+                                duration: delayBetweenPoints,
+                                from: previousY,
+                                delay(ctx) {
+                                if (ctx.type !== 'data' || ctx.yStarted) {
+                                    return 0;
+                                }
+                                ctx.yStarted = true;
+                                return ctx.index * delayBetweenPoints;
+                                }
                             }
+                        }
+                    });
+                </script>
+            </canvas>
+        </div>
+        <div class="four">
+            <canvas id="lcs_bink" width="576" height="576">
+                <script>
+                    Chart.defaults.font.family = "'Roboto', 'sans-serif'";
+                    const lc_col = [
+                        // 'rgba(0,177,231, 1)', //Co-op
+                        // 'rgba(80,115,121, 1)', //FatFace
+                        'rgba(0,0,0, 0.8)', //HN
+                        'rgba(210,33,46, 1)', //Iceland
+                        // '', //LA
+                        'rgba(106,190,191, 1)', //SqM
+                        'rgba(178,210,53, 1)' //Wasabi
+                    ]
+                    const ctx1 = document.getElementById("lcs_bink").getContext("2d");
+                    const lcs_bink = new Chart(ctx1, {
+                        type:"pie",
+                        data: {
+                            labels: {{ lcs_label | safe}},
+                            datasets: [
+                                {
+                                    label: 'Bink',
+                                    data: {{ lcs_bink | safe}},
+                                    backgroundColor: lc_col,
+                                }
+                            ]
+                        },
+                        options: {
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Total Active PLL Loyalty Cards in Bink Native'
+                                },
+                                labels: {
+                                    render: (args) => {
+                                        if(args.percentage > 5){
+                                            return `${args.label}, ${args.value}, ${args.percentage}%`
+                                        }
+                                    }
+                                }
+                            },
+                            responsive: false
+                        }
+                    });
+                </script>
+            </canvas>
+        </div>
+        <div class="five">
+            <canvas id="lcs_barc" width="576" height="576">
+                <script>
+                    Chart.defaults.font.family = "'Roboto', 'sans-serif'";
+                    const ctx2 = document.getElementById("lcs_barc").getContext("2d");
+                    const lcs_barc = new Chart(ctx2, {
+                        type:"pie",
+                        data: {
+                            labels: {{ lcs_label | safe}},
+                            datasets: [
+                                {
+                                    label: 'Barclays',
+                                    data: {{ lcs_barc | safe}},
+                                    backgroundColor: lc_col,
+                                }
+                            ]
+                        },
+                        options: {
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Total Active PLL Loyalty Cards in Barclays Native'
+                                },
+                                labels: {
+                                    render: (args) => {
+                                        if(args.percentage > 5){
+                                            return `${args.label}, ${args.value}, ${args.percentage}%`
+                                        }
+                                    }
+                                },
+                                textStrokeColor: 'green'                                                               
+                            },
+                            responsive: false
                         }
                     });
                 </script>

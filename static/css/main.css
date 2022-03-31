@@ -70,3 +70,13 @@ body {
     grid-column: 1 / 4;
     grid-row: 2;
 }
+
+.four {
+  grid-column: 1 / 2;
+  grid-row: 3;
+}
+
+.five {
+  grid-column: 2 / 2;
+  grid-row: 3;
+}
