@@ -11,25 +11,26 @@ from dash.dependencies import Input, Output  # pip install dash (version 2.0.0 o
 from supporting_files import query_functions
 from app import app
 import dash_bootstrap_components as dbc
+from supporting_files import env
+import psycopg2
 
 # -- Import and clean data (importing csv into pandas)
 
-df_PC = query_functions.QueryGroup("""
-SELECT pca.id AS pc_id,  u.id AS u_id, u.client_id, pca.created, pc.name
+df_PC = pd.read_sql("""
+SELECT COUNT(*) "Total Card Count", DATE(pca.created) "Creation Date", pc.name "Card Issuer"
 FROM payment_card_paymentcardaccount pca
-LEFT JOIN ubiquity_paymentcardaccountentry upa ON upa.payment_card_account_id = pca.id
-LEFT JOIN "user" u ON u.id = upa.user_id
 LEFT JOIN payment_card_paymentcard pc ON pc.id = pca.payment_card_id
-WHERE client_id LIKE 'neik%' AND u.id > 500000
-""", "created", "name", "u_id", "2018-01-01","2022-05-01")
+GROUP BY  pc.name, DATE(pca.created)
+""", psycopg2.connect(
+    host=env.hostref,
+    database=env.databasenameref,
+    user=env.usernameref,
+    password=env.passwordref,
+    port=env.portref))
 
 print(df_PC[:5])
-df_PC.rename(columns={
-        "created": "Creation Date",
-        "u_id": "Total User Count",
-        "name": "Card Issuer"}
-                 ,inplace=True)
-dff_PC_table = df_PC.groupby(['Card Issuer'])['Total User Count'].sum().reset_index()
+
+dff_PC_table = df_PC.groupby(['Card Issuer'])['Total Card Count'].sum().reset_index()
 
 #%%
 # ------------------------------------------------------------------------------
@@ -80,7 +81,8 @@ layout = dbc.Container([
                         {"label": "2022", "value": 2022}],
                     multi=False,
                     value=2019,
-                    style={'width': "40%"},
+                    style={'width': "40%",
+                                      'color': '#212121'},
                     persistence=True,
                     persistence_type='local'
                     ),
@@ -140,14 +142,14 @@ def update_graph(option_slctd):
     fig_bar = px.bar(
         data_frame=dff_PC,
         x='Creation Date',
-        y='Total User Count',
+        y='Total Card Count',
         color='Card Issuer',
-        hover_data=['Card Issuer', 'Total User Count'],
+        hover_data=['Card Issuer', 'Total Card Count'],
         template='plotly_dark'
     )
     fig_pie = px.pie(
         data_frame=dff_PC,
-        values='Total User Count',
+        values='Total Card Count',
         names='Card Issuer',
         template='plotly_dark'
     )

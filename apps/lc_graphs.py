@@ -11,25 +11,28 @@ from dash.dependencies import Input, Output  # pip install dash (version 2.0.0 o
 from supporting_files import query_functions
 from app import app
 import dash_bootstrap_components as dbc
+from supporting_files import env
+import psycopg2
+
 
 # -- Import and clean data (importing csv into pandas)
 
-df_LC = query_functions.QueryGroup("""
-SELECT sa.id AS sa_id,  u.id AS u_id, u.client_id, sa.created, sa.scheme_id, ss.company
+df_LC = pd.read_sql("""
+SELECT COUNT(*) "Total Card Count", DATE(sa.created) "Creation Date", ss.company "Merchant"
 FROM scheme_schemeaccount sa
-LEFT JOIN ubiquity_schemeaccountentry usa ON usa.scheme_account_id = sa.id
-LEFT JOIN "user" u ON u.id = usa.user_id
 LEFT JOIN scheme_scheme ss ON ss.id = sa.scheme_id
-WHERE client_id LIKE 'neik%' AND u.id > 500000
-""", "created", "company", "u_id", "2018-01-01","2022-05-01")
+WHERE company in ('Wasabi', 'Harvey Nichols', 'Iceland', 'ASOS', 'Squaremeal')
+GROUP BY  ss.company, DATE(sa.created)
+""", psycopg2.connect(
+    host=env.hostref,
+    database=env.databasenameref,
+    user=env.usernameref,
+    password=env.passwordref,
+    port=env.portref))
 
 print(df_LC[:5])
-df_LC.rename(columns={
-        "created": "Creation Date",
-        "u_id": "Total User Count",
-        "company": "Merchant"}
-                 ,inplace=True)
-dff_LC_table = df_LC.groupby(['Merchant'])['Total User Count'].sum().reset_index()
+
+dff_LC_table = df_LC.groupby(['Merchant'])['Total Card Count'].sum().reset_index()
 
 #%%
 # ------------------------------------------------------------------------------
@@ -80,7 +83,8 @@ layout = dbc.Container([
                         {"label": "2022", "value": 2022}],
                     multi=False,
                     value=2019,
-                    style={'width': "40%"},
+                    style={'width': "40%",
+                                      'color': '#212121'},
                     persistence=True,
                     persistence_type='local'
                     ),
@@ -140,14 +144,14 @@ def update_graph(option_slctd):
     fig_bar = px.bar(
         data_frame=dff_LC,
         x='Creation Date',
-        y='Total User Count',
+        y='Total Card Count',
         color='Merchant',
-        hover_data=['Merchant', 'Total User Count'],
+        hover_data=['Merchant', 'Total Card Count'],
         template='plotly_dark'
     )
     fig_pie = px.pie(
         data_frame=dff_LC,
-        values='Total User Count',
+        values='Total Card Count',
         names='Merchant',
         template='plotly_dark'
     )

@@ -11,17 +11,33 @@ from dash.dependencies import Input, Output  # pip install dash (version 2.0.0 o
 from supporting_files import query_functions
 from app import app
 import dash_bootstrap_components as dbc
+from supporting_files import env
+import psycopg2
 
-df_UA = query_functions.QueryGroup("""
-SELECT u.id, u.client_id, u.date_joined, ca.name
+df_UA = pd.read_sql("""
+SELECT COUNT(*) "Total User Count", DATE(u.date_joined) "Creation Date", ca.name "Channel"
 FROM "user" u
 LEFT JOIN user_clientapplication ca ON u.client_id = ca.client_id
-WHERE u.id > 500000
-""", "date_joined", "name", "id", "2022-01-01","2022-02-02")
+GROUP BY  ca.name, DATE(u.date_joined)
+""", psycopg2.connect(
+    host=env.hostref,
+    database=env.databasenameref,
+    user=env.usernameref,
+    password=env.passwordref,
+    port=env.portref))
 
 print(df_UA[:5])
 
-dff_UA_table = df_UA.groupby(['name'])['id'].sum().reset_index()
+df_vouchers = """SELECT
+    jsonb_array_elements(vouchers)->>'date_issued'::TEXT AS issue_date,
+    jsonb_array_elements(vouchers)->>'code'::TEXT AS code,
+    scheme_scheme.company AS name
+FROM
+    scheme_schemeaccount
+WHERE
+    vouchers!= '{}'"""
+
+dff_UA_table = df_UA.groupby(['Channel'])['Total User Count'].sum().reset_index()
 
 #%%
 #%%
@@ -37,7 +53,7 @@ layout = dbc.Container([
                 html.Br(),
                 dash_table.DataTable(
                     dff_UA_table.to_dict('records'),
-                    [{"name": i, "id": i} for i in dff_UA_table.columns], 
+                    [{"id": i, "name": i} for i in dff_UA_table.columns], 
                     id='UA_by_channel_table',
                     style_cell={'textAlign': 'left',
                         'font-family': 'Roboto, sans-serif', 'fontSize': '25', 'font-weight': 300},
@@ -73,7 +89,8 @@ layout = dbc.Container([
                         {"label": "2022", "value": 2022}],
                     multi=False,
                     value=2019,
-                    style={'width': "40%"},
+                    style={'width': "40%",
+                                      'color': '#212121'},
                     persistence=True,
                     persistence_type='local'
                     ),
@@ -117,8 +134,8 @@ def update_graph_ua(option_slctd_ua):
     container_ua = f"The year chosen by user was: {option_slctd_ua}"
 
     dff_UA = df_UA.copy()
-    dff_UA['date_joined'] = pd.to_datetime(dff_UA['date_joined'])
-    dff_UA['Year'] = df_UA['date_joined'].astype(str).str[:4]
+    dff_UA['Creation Date'] = pd.to_datetime(dff_UA['Creation Date'])
+    dff_UA['Year'] = df_UA['Creation Date'].astype(str).str[:4]
     dff_UA['Year'] = dff_UA['Year'].astype('int32')
     dff_UA = dff_UA[dff_UA["Year"] == option_slctd_ua]
     
@@ -126,16 +143,16 @@ def update_graph_ua(option_slctd_ua):
     # Plotly Express
     fig_lin_ua = px.line(
         data_frame=dff_UA,
-        x='date_joined',
-        y='id',
-        color='name',
-        hover_data=['name', 'id'],
+        x='Creation Date',
+        y='Total User Count',
+        color='Channel',
+        hover_data=['Channel', 'Total User Count'],
         template='plotly_dark'
     )
     fig_pie_ua = px.pie(
         data_frame=dff_UA,
-        values='id',
-        names='name',
+        values='Total User Count',
+        names='Channel',
         template='plotly_dark'
     )
 
