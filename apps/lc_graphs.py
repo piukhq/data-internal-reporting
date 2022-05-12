@@ -14,6 +14,9 @@ import dash_bootstrap_components as dbc
 from supporting_files import env
 import psycopg2
 
+from app import cache
+from random import randint
+from flask_caching import Cache
 
 # -- Import and clean data (importing csv into pandas)
 
@@ -34,6 +37,13 @@ print(df_LC[:5])
 
 dff_LC_table = df_LC.groupby(['Merchant'])['Total Card Count'].sum().reset_index()
 
+TIMEOUT = 10
+
+
+@cache.cached(timeout=TIMEOUT, key_prefix='yo')
+def randomint():
+    randnum = randint(1,1000)
+    return randnum
 #%%
 # ------------------------------------------------------------------------------
 # App layout - everything in the dash goes in here including the HTML
@@ -42,7 +52,7 @@ layout = dbc.Container([
     dbc.Row([
         dbc.Col(
                 [
-                html.H2("Total Loyalty Cards Created by Merchant",
+                html.H2(f"Total Loyalty Cards Created by Merchant{randomint()}",
                 className='text-center text-secondary, mb-4', style={'text-align': 'center'}),
                 html.Br(),
                 dash_table.DataTable(
@@ -117,6 +127,10 @@ layout = dbc.Container([
 
 # ------------------------------------------------------------------------------
 # Connect the Plotly graphs with Dash Components
+@cache.cached(timeout=TIMEOUT)
+def randomint():
+    randnum = randint(1,1000)
+    return randnum
 @app.callback(
     [Output(component_id='output_container', component_property='children'),
      Output(component_id='LC_by_merchant', component_property='figure'),
@@ -129,7 +143,7 @@ def update_graph(option_slctd):
     print(option_slctd)
     print(type(option_slctd))
 
-    container = f"The year chosen by user was: {option_slctd}"
+    container = f"The year chosen by user was: {randomint()}"
     bar_title = f"Loyalty Cards Created by Day ({option_slctd})"
     pie_title = f"Loyalty Cards Pie Chart ({option_slctd})"
 
