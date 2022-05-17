@@ -17,6 +17,7 @@ import datetime
 
 
 from app import cache
+from app import color_mapping
 from random import randint
 from flask_caching import Cache
 
@@ -31,6 +32,8 @@ OR
 ca.name = 'Bink')
 AND
 DATE(u.date_joined) < current_date
+AND
+NOT (email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\')
 GROUP BY  ca.name, DATE(u.date_joined)
 """, psycopg2.connect(
     host=env.hostref,
@@ -56,6 +59,8 @@ LEFT JOIN user_clientapplication ca ON u.client_id = ca.client_id AND (ca.name =
 WHERE company in ('Wasabi', 'Iceland', 'ASOS', 'SquareMeal')
 AND
 DATE(sa.created) < current_date
+AND
+NOT (email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\')
 GROUP BY  ss.company, DATE(sa.created), upse.active_link, sa.status = 1, ca.name
 """, psycopg2.connect(
     host=env.hostref,
@@ -69,7 +74,7 @@ df_LC_PLL_totals = df_LC[(df_LC['PLL Ready']==True) & (df_LC['Active']==True)].g
 df_LC_PLL_totals
 
 #Create dataframe for LC Pie Chart
-df_LC_PLL = df_LC[(df_LC['PLL Ready']==True)&(df_LC['Active']==True)]
+df_LC_PLL = df_LC[(df_LC['PLL Ready']==True)&(df_LC['Active']==True)].sort_values('Merchant')
 
 # %%
 #====================PC SQL query==============================
@@ -80,7 +85,11 @@ LEFT JOIN payment_card_paymentcard pc ON pc.id = pca.payment_card_id
 INNER JOIN ubiquity_paymentcardaccountentry upcae ON upcae.payment_card_account_id = pca.id
 LEFT JOIN "user" u ON u.id = upcae.user_id
 INNER JOIN user_clientapplication ca ON u.client_id = ca.client_id AND (ca.name = 'Bink' OR ca.name = 'Barclays Mobile Banking')
-WHERE pca.status = 1 AND make_date(pca.expiry_year,pca.expiry_month,01) > current_date AND DATE(pca.created) < current_date
+WHERE pca.status = 1 AND make_date(pca.expiry_year,pca.expiry_month,01) > current_date 
+AND 
+DATE(pca.created) < current_date
+AND
+NOT (email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\')
 GROUP BY  pc.name, ca.name, DATE(pca.created)
 """, psycopg2.connect(
     host=env.hostref,
@@ -97,12 +106,15 @@ def generate_headers(dict):
     length = len(dict)
     for key in dict:
         output.append(dbc.Col(
-                [
-                dbc.Row([html.H3(f"{key}",
-                className='text-center text-secondary, mb-4', style={'text-align': 'center'})]),
-                dbc.Row([html.H3(f"{dict[key]}",
-                className='text-center text-info, mb-4', style={'text-align': 'center'})])
-                ], 
+            dbc.Card([
+                dbc.CardHeader(html.H5(f"{key}", className="text-center")),
+                dbc.CardBody(
+                    [
+                        html.H3(f"{dict[key]}", className="text-center card-title")
+                        
+                    ]
+                ),
+            ], color="dark", inverse=True),
                 xs=max(6,12/length), sm=max(6,12/length), md=max(6,12/length), lg=max(3,12/length), xl=max(3,12/length)))
     return output
 
@@ -274,14 +286,14 @@ def update_graph(start_date, end_date, channel):
     dff_LC['Creation Date'] = pd.to_datetime(dff_LC['Creation Date'])
     dff_LC = dff_LC[(dff_LC['Creation Date']>=start_date) & (dff_LC['Creation Date']<=end_date)]
     dff_LC = dff_LC[dff_LC["Channel"].isin(channel)]
-    dff_LC = dff_LC.groupby(['Creation Date','Merchant']).sum().reset_index()
+    dff_LC = dff_LC.groupby(['Creation Date','Merchant']).sum().reset_index().sort_values('Merchant')
     
     #Dataframe for pie chart
     dff_LC_PLL = df_LC_PLL.copy()
     dff_LC_PLL['Creation Date'] = pd.to_datetime(dff_LC_PLL['Creation Date'])
     dff_LC_PLL = dff_LC_PLL[(dff_LC_PLL['Creation Date']>=start_date) & (dff_LC_PLL['Creation Date']<=end_date)]
     dff_LC_PLL = dff_LC_PLL[dff_LC_PLL["Channel"].isin(channel)]
-    dff_LC_PLL = dff_LC_PLL.groupby('Merchant').sum().reset_index()
+    dff_LC_PLL = dff_LC_PLL.groupby('Merchant').sum().reset_index().sort_values('Merchant')
 
     #Create Graphs for Loyalty Cards Express
     lc_fig_bar = px.bar(
@@ -290,14 +302,16 @@ def update_graph(start_date, end_date, channel):
         y='Total Card Count',
         color='Merchant',
         hover_data=['Merchant', 'Total Card Count'],
-        template='plotly_dark'
+        template='plotly_dark',
+        color_discrete_map=color_mapping
     )
     lc_fig_pie = px.pie(
         data_frame=dff_LC_PLL,
         values='Total Card Count',
         color='Merchant',
         names='Merchant',
-        template='plotly_dark'
+        template='plotly_dark',
+        color_discrete_map=color_mapping
     )
 
     #Create Dataframes for User
@@ -313,7 +327,8 @@ def update_graph(start_date, end_date, channel):
         y='Total User Count',
         color='Channel',
         hover_data=['Channel', 'Total User Count'],
-        template='plotly_dark')
+        template='plotly_dark',
+        color_discrete_map=color_mapping)
 
     #Create Dataframes for payment cards
     dff_PC = df_PC.copy()
@@ -327,7 +342,8 @@ def update_graph(start_date, end_date, channel):
         data_frame=dff_PC,
         values='Total Card Count',
         names='Card Issuer',
-        template='plotly_dark'
+        template='plotly_dark',
+        color_discrete_map=color_mapping
     )
 
 

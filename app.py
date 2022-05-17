@@ -8,6 +8,19 @@ from flask_caching import Cache
 
 
 # meta_tags are required for the app layout to be mobile responsive
+color_mapping={
+                "ASOS": "rgb(27,158,119)",
+                "SquareMeal": "rgb(217,95,2)",
+                "Iceland": "rgb(117,112,179)",
+                "Wasabi": "rgb(231,41,138)",
+
+                "Visa": "rgb(27,158,119)",
+                "Mastercard": "rgb(217,95,2)",
+                "American Express": "rgb(231,41,138)",
+
+                "Bink": "rgb(217,95,2)",
+                "Barclays Mobile Banking": "rgb(117,112,179)"}
+
 app = dash.Dash(__name__, suppress_callback_exceptions=True,
                 external_stylesheets=[dbc.themes.DARKLY],
                 meta_tags=[{'name': 'viewport',

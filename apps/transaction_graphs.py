@@ -13,6 +13,7 @@ import dash_bootstrap_components as dbc
 from supporting_files import env
 import psycopg2
 import datetime
+from app import color_mapping
 
 host = env.hostref
 user = env.usernameref
@@ -241,7 +242,8 @@ def update_graph(start_date, end_date):
         y='No. of Transactions',
         color='Merchant',
         hover_data=['Merchant', 'No. of Transactions'],
-        template='plotly_dark'
+        template='plotly_dark',
+        color_discrete_map=color_mapping
     )
 
     fig_bar_active = px.bar(
@@ -250,7 +252,8 @@ def update_graph(start_date, end_date):
         y='No. of Users',
         color='Merchant',
         hover_data=['Merchant', 'No. of Users'],
-        template='plotly_dark'
+        template='plotly_dark',
+        color_discrete_map=color_mapping
     )
 
     # Trialing hover templates to clean up formatting
