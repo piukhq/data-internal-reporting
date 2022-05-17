@@ -30,7 +30,7 @@ GROUP BY  ss.company, DATE(sa.created)
     password=env.passwordref,
     port=env.portref))
 
-print(df_LC[:5])
+# print(df_LC[:5])
 
 dff_LC_table = df_LC.groupby(['Merchant'])['Total Card Count'].sum().reset_index()
 
@@ -126,8 +126,8 @@ layout = dbc.Container([
     [Input(component_id='slct_year', component_property='value')]
 )
 def update_graph(option_slctd):
-    print(option_slctd)
-    print(type(option_slctd))
+    # print(option_slctd)
+    # print(type(option_slctd))
 
     container = f"The year chosen by user was: {option_slctd}"
     bar_title = f"Loyalty Cards Created by Day ({option_slctd})"

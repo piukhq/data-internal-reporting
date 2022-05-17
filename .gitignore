@@ -189,3 +189,5 @@ cython_debug/
 
 #Enviroment files ignored
 env.py
+
+test.py

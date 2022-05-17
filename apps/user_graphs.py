@@ -26,7 +26,7 @@ GROUP BY  ca.name, DATE(u.date_joined)
     password=env.passwordref,
     port=env.portref))
 
-print(df_UA[:5])
+# print(df_UA[:5])
 
 df_vouchers = """SELECT
     jsonb_array_elements(vouchers)->>'date_issued'::TEXT AS issue_date,
@@ -128,8 +128,8 @@ layout = dbc.Container([
     [Input(component_id='slct_year_ua', component_property='value')]
 )
 def update_graph_ua(option_slctd_ua):
-    print(option_slctd_ua)
-    print(type(option_slctd_ua))
+    # print(option_slctd_ua)
+    # print(type(option_slctd_ua))
 
     container_ua = f"The year chosen by user was: {option_slctd_ua}"
 

@@ -28,7 +28,7 @@ GROUP BY  pc.name, DATE(pca.created)
     password=env.passwordref,
     port=env.portref))
 
-print(df_PC[:5])
+# print(df_PC[:5])
 
 dff_PC_table = df_PC.groupby(['Card Issuer'])['Total Card Count'].sum().reset_index()
 
@@ -124,8 +124,8 @@ layout = dbc.Container([
     [Input(component_id='slct_year_pc', component_property='value')]
 )
 def update_graph(option_slctd):
-    print(option_slctd)
-    print(type(option_slctd))
+    # print(option_slctd)
+    # print(type(option_slctd))
 
     container = f"The year chosen by user was: {option_slctd}"
     bar_title = f"Payment Cards Created by Day ({option_slctd})"

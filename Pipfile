@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask-caching = "*"
+pandas = "*"
+dash = "*"
+dash-bootstrap-components = "*"
+flask = "*"
+matplotlib = "*"
+seaborn = "*"
+psycopg2 = "*"
+plotly = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
