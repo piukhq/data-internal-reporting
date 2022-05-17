@@ -15,8 +15,8 @@ app = dash.Dash(__name__, suppress_callback_exceptions=True,
                             'content': 'width=device-width, initial-scale=1.0'}]
                 )
 cache = Cache(app.server, config={
-    'CACHE_TYPE': 'FileSystemCache',
-    'CACHE_DIR': 'cache-directory'
+    'CACHE_TYPE': 'RedisCache',
+    'CACHE_REDIS_URL': 'redis://localhost:6379'
     # try 'FileSystemCache' if you don't want to setup redis
     # 'CACHE_TYPE': 'redis',
     # 'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379')

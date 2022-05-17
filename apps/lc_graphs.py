@@ -37,13 +37,13 @@ print(df_LC[:5])
 
 dff_LC_table = df_LC.groupby(['Merchant'])['Total Card Count'].sum().reset_index()
 
-TIMEOUT = 10
+TIMEOUT = 30
 
 
-@cache.cached(timeout=TIMEOUT, key_prefix='yo')
-def randomint():
-    randnum = randint(1,1000)
-    return randnum
+# @cache.cached(timeout=TIMEOUT, key_prefix='yo')
+# def randomint():
+#     randnum = randint(1,1000)
+#     return randnum
 #%%
 # ------------------------------------------------------------------------------
 # App layout - everything in the dash goes in here including the HTML
@@ -52,7 +52,7 @@ layout = dbc.Container([
     dbc.Row([
         dbc.Col(
                 [
-                html.H2(f"Total Loyalty Cards Created by Merchant{randomint()}",
+                html.H2(f"Total Loyalty Cards Created by Merchant",
                 className='text-center text-secondary, mb-4', style={'text-align': 'center'}),
                 html.Br(),
                 dash_table.DataTable(
@@ -128,9 +128,13 @@ layout = dbc.Container([
 # ------------------------------------------------------------------------------
 # Connect the Plotly graphs with Dash Components
 @cache.cached(timeout=TIMEOUT)
-def randomint():
-    randnum = randint(1,1000)
-    return randnum
+# def randomint():
+#     randnum = randint(1,1000)
+#     return randnum
+def dataframe():
+    yo = pd.read_csv("Yo.csv")
+    return yo
+
 @app.callback(
     [Output(component_id='output_container', component_property='children'),
      Output(component_id='LC_by_merchant', component_property='figure'),
@@ -143,11 +147,11 @@ def update_graph(option_slctd):
     print(option_slctd)
     print(type(option_slctd))
 
-    container = f"The year chosen by user was: {randomint()}"
+    container = f"The year chosen by user was: "
     bar_title = f"Loyalty Cards Created by Day ({option_slctd})"
     pie_title = f"Loyalty Cards Pie Chart ({option_slctd})"
 
-    dff_LC = df_LC.copy()
+    dff_LC = dataframe().copy()
     dff_LC['Creation Date'] = pd.to_datetime(dff_LC['Creation Date'])
     dff_LC['Year'] = df_LC['Creation Date'].astype(str).str[:4]
     dff_LC['Year'] = dff_LC['Year'].astype('int32')
