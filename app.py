@@ -28,6 +28,9 @@ app = dash.Dash(__name__, suppress_callback_exceptions=True,
                 )
 cache = Cache(app.server, config={
     # try 'filesystem' if you don't want to setup redis
-    'CACHE_TYPE': 'SimpleCache'
+    'CACHE_TYPE': 'RedisCache',
+    'REDIS URL': 'redis://localhost:6379'
 })
+
+
 server = app.server

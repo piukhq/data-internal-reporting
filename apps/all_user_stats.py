@@ -1,4 +1,5 @@
 #%%
+from socket import timeout
 from turtle import left, width
 import pandas as pd
 import plotly.express as px  # (version 4.7.0 or higher)
@@ -20,6 +21,8 @@ from app import cache
 from app import color_mapping
 from random import randint
 from flask_caching import Cache
+
+TIMEOUT = 60
 
 #====================User SQL query==============================
 
@@ -248,6 +251,7 @@ layout = dbc.Container([
 
 # ------------------------------------------------------------------------------
 # Connect the Plotly graphs with Dash Components
+@Cache.cache(timeout=TIMEOUT)
 @app.callback(
     [Output(component_id='lc_by_merchant', component_property='figure'),
      Output(component_id='lc_Pie_by_merchant', component_property='figure'),
