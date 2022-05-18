@@ -23,6 +23,11 @@ from flask_caching import Cache
 
 TIMEOUT = 60
 
+host = env.hostref
+user = env.usernameref
+password = env.passwordref
+port = env.portref
+
 # %%
 #====================Generate column with loop==============================
 def generate_headers(dict):
@@ -50,7 +55,12 @@ layout = dbc.Container([
         dbc.Col(
                 [
                 html.H2(f"Total Consented Users by Channel",
-                className='text-center text-secondary, mb-4', style={'text-align': 'center'})
+                id = "total_UA",
+                className='text-center text-secondary, mb-4', style={'text-align': 'center'}),
+                dbc.Tooltip(
+                    "Total Consented Users by Channel = Total count of users in the Bink and Barclays channel with a service consent. Testers are excluded. Barclays users are counted by Barclays customer ref. Bink users are counted by Bink internal user ref. Note Bink channel users cannot remove consent from service.",
+                    target="total_UA",
+                    placement="top")
                 ], 
             xs=12, sm=12, md=12, lg=6, xl=6),
 
@@ -66,7 +76,12 @@ layout = dbc.Container([
         dbc.Col(
                 [
                 html.H2(f"Total Active PLL Loyalty Cards by Merchant",
-                className='text-center text-secondary, mb-4', style={'text-align': 'center'})
+                id = 'total_PLL',
+                className='text-center text-secondary, mb-4', style={'text-align': 'center'}),
+                dbc.Tooltip(
+                    "Total Active PLL Loyalty Cards by Merchant = Total count of PLL ready loyalty cards in an active status. Loyalty cards in tester wallets are excluded.",
+                    target="total_PLL",
+                    placement="top")
                 ], 
             xs=12, sm=12, md=12, lg=6, xl=6),
 
@@ -82,7 +97,12 @@ layout = dbc.Container([
 
     dbc.Row([
         dbc.Col(
-            [   html.H6("Select dates to filter graphs"),
+            [   html.H6("Select dates to filter graphs",
+                id = "date_filter_text"),
+                dbc.Tooltip(
+                    "Select dates to filer below graphs. Clearing filters will show all data. Large date ranges may make graphs unreadable.",
+                    target="date_filter_text",
+                    placement="top"),
                 dcc.DatePickerRange(
                     id = 'date_picker',
                     month_format='MMMM Y',
@@ -102,7 +122,12 @@ layout = dbc.Container([
             ),
         dbc.Col(
             [
-                html.H6("Select channel to filter graphs"),
+                html.H6("Select channel to filter graphs",
+                id = "channel_filter_text"),
+                dbc.Tooltip(
+                    "Select channel to filter below graphs. Clearing filters will show all data including cards not in wallets. It does not currently filter the headline numbers at the top of the page.",
+                    target="channel_filter_text",
+                    placement="top"),
                 dcc.Dropdown(id="slct_channel",
                     options=[
                         {"label": "Barclays", "value": "Barclays Mobile Banking"},
@@ -125,7 +150,10 @@ layout = dbc.Container([
         dbc.Col(
             [
                 html.H2(id = 'lc_bar_graph_title', children=[]),
-                html.H6("Insert description here............"),
+                dbc.Tooltip(
+                    "Loyalty Cards Created by Day = Count of all loyalty cards created on each day. PLL ready and active status are not requirements for this metric. Loyalty cards in tester wallets are excluded. Historic values may decrement if channel filters are selected, remove channel filters to see a static view. Loyalty cards are counted by bink internal ref therefore multiple counts for same loyalty card may exist due to existance of loyalty cards in error states.",
+                    target="lc_bar_graph_title",
+                    placement="top"),
                 html.Br(),
                 dcc.Graph(id='lc_by_merchant', figure={})
                 ]
@@ -134,7 +162,10 @@ layout = dbc.Container([
         ),
         dbc.Col([
                 html.H2(id = 'lc_pie_graph_title', children=[]),
-                html.H6("Insert description here............"),
+                dbc.Tooltip(
+                    "Loyalty Cards Pie Chart = Total count of PLL ready loyalty cards in an active status. Loyalty cards in tester wallets are excluded. Loyalty cards are counted by bink internal ref.",
+                    target="lc_pie_graph_title",
+                    placement="top"),
                 html.Br(),
                 dcc.Graph(id='lc_Pie_by_merchant', figure={})
         ]
@@ -149,7 +180,10 @@ layout = dbc.Container([
         dbc.Col(
             [
                 html.H2(id = 'UA_line_title', children=[]),
-                html.H6("Insert description here............"),
+                dbc.Tooltip(
+                    "Users Created by Day = Total count of users on each day. Service consent is not a requirement for this metric. Testers are excluded. Barclays users are counted by Barclays customer ref. Bink users are counted by Bink internal user ref.",
+                    target="UA_line_title",
+                    placement="top"),
                 html.Br(),
                 dcc.Graph(id='UA_by_channel', figure={})
                 ]
@@ -158,7 +192,10 @@ layout = dbc.Container([
         ),
         dbc.Col([
                 html.H2(id = 'pc_pie_graph_title', children=[]),
-                html.H6("Insert description here............"),
+                dbc.Tooltip(
+                    "Payment Cards Pie Chart = Total count of unexpired payment cards in an active status. Paymemt cards in tester wallets are excluded. Payment Cards are counted by fingerprint (PAN).",
+                    target="pc_pie_graph_title",
+                    placement="top"),
                 html.Br(),
                 dcc.Graph(id='Pie_by_issuer_pc', figure={})
         ]
@@ -175,49 +212,49 @@ layout = dbc.Container([
 # Connect the Plotly graphs with Dash Components
 @cache.cached(timeout=TIMEOUT)
 def query():
+
+    print("Cache Refresh complete")
+
     #====================User SQL query===================================
-    df_UA = pd.read_sql("""SELECT COUNT(Distinct u.id) "Total User Count", DATE(u.date_joined) "Creation Date", ca.name "Channel"
+    df_UA = pd.read_sql("""SELECT COUNT(DISTINCT (CASE WHEN ca.name = 'Barclays Mobile Banking' THEN u.external_id::varchar WHEN ca.name = 'Bink' THEN u.id::varchar END)) "Total User Count", DATE(u.date_joined) "Creation Date", ca.name "Channel", ((ca.name = 'Barclays Mobile Banking' AND (usc.user_id IS NOT NULL)) OR ca.name = 'Bink') "Consented"
         FROM "user" u
         LEFT JOIN user_clientapplication ca ON u.client_id = ca.client_id
         LEFT JOIN ubiquity_serviceconsent usc ON usc.user_id = u.id
-        WHERE ((ca.name = 'Barclays Mobile Banking' AND (usc.user_id IS NOT NULL))
-        OR
-        ca.name = 'Bink')
-        AND
+        WHERE 
         DATE(u.date_joined) < current_date
         AND
-        NOT (email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\')
-        GROUP BY  ca.name, DATE(u.date_joined)
+        (NOT (email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\') OR email IS NULL)
+        GROUP BY  ca.name, DATE(u.date_joined), ((ca.name = 'Barclays Mobile Banking' AND (usc.user_id IS NOT NULL)) OR ca.name = 'Bink')
         """, psycopg2.connect(
-            host=env.hostref,
+            host=host,
             database=env.databasenameref,
-            user=env.usernameref,
-            password=env.passwordref,
-            port=env.portref))
+            user=user,
+            password=password,
+            port=port))
     
     #Create user headline figures
-    total_user_headline = df_UA.groupby('Channel').sum().to_dict()['Total User Count']
+    total_user_headline = df_UA[df_UA["Consented"]==True].groupby('Channel').sum().to_dict()['Total User Count']
 
     #====================PC SQL query==============================
     df_PC = pd.read_sql("""
-        SELECT COUNT(Distinct pca.id) "Total Card Count", pc.name "Card Issuer", ca.name "Channel", DATE(pca.created) "Creation Date"
+        SELECT COUNT(Distinct pca.fingerprint) "Total Card Count", pc.name "Card Issuer", ca.name "Channel", DATE(pca.created) "Creation Date"
         FROM payment_card_paymentcardaccount pca
         LEFT JOIN payment_card_paymentcard pc ON pc.id = pca.payment_card_id
-        INNER JOIN ubiquity_paymentcardaccountentry upcae ON upcae.payment_card_account_id = pca.id
+        LEFT JOIN ubiquity_paymentcardaccountentry upcae ON upcae.payment_card_account_id = pca.id
         LEFT JOIN "user" u ON u.id = upcae.user_id
-        INNER JOIN user_clientapplication ca ON u.client_id = ca.client_id AND (ca.name = 'Bink' OR ca.name = 'Barclays Mobile Banking')
+        LEFT JOIN user_clientapplication ca ON u.client_id = ca.client_id AND (ca.name = 'Bink' OR ca.name = 'Barclays Mobile Banking')
         WHERE pca.status = 1 AND make_date(pca.expiry_year,pca.expiry_month,01) > current_date 
         AND 
         DATE(pca.created) < current_date
         AND
-        NOT (email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\')
+        (NOT (email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\') OR email IS NULL)
         GROUP BY  pc.name, ca.name, DATE(pca.created)
         """, psycopg2.connect(
-            host=env.hostref,
+            host=host,
             database=env.databasenameref,
-            user=env.usernameref,
-            password=env.passwordref,
-            port=env.portref))
+            user=user,
+            password=password,
+            port=port))
     
     #====================LC SQL query==============================
     df_LC = pd.read_sql("""
@@ -232,14 +269,14 @@ def query():
         AND
         DATE(sa.created) < current_date
         AND
-        NOT (email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\')
+        (NOT (email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\') OR email IS NULL)
         GROUP BY  ss.company, DATE(sa.created), upse.active_link, sa.status = 1, ca.name
         """, psycopg2.connect(
-            host=env.hostref,
+            host=host,
             database=env.databasenameref,
-            user=env.usernameref,
-            password=env.passwordref,
-            port=env.portref))
+            user=user,
+            password=password,
+            port=port))
 
     #Create Headline totals
     df_LC_PLL_totals = df_LC[(df_LC['PLL Ready']==True) & (df_LC['Active']==True)].groupby('Merchant').sum().to_dict()['Total Card Count']
@@ -247,7 +284,7 @@ def query():
     #Create dataframe for LC Pie Chart
     df_LC_PLL = df_LC[(df_LC['PLL Ready']==True)&(df_LC['Active']==True)].sort_values('Merchant')
 
-    print("Cache Refresh in progress")
+    print("Cache Refresh complete")
 
     return {"df_UA": df_UA, "total_user_headline": total_user_headline, "df_PC": df_PC,"df_LC": df_LC, "df_LC_PLL_totals": df_LC_PLL_totals, "df_LC_PLL": df_LC_PLL}
 
@@ -271,6 +308,16 @@ def query():
     ]
 )
 def update_graph(start_date, end_date, channel):
+
+    dict = query()
+
+    df_LC = dict["df_LC"]
+    df_LC_PLL = dict["df_LC_PLL"]
+    df_UA = dict["df_UA"]
+    total_user_headline = dict["total_user_headline"]
+    df_PC = dict["df_PC"]
+    df_LC_PLL_totals = dict["df_LC_PLL_totals"]
+
     if start_date is None:
         start_date = datetime.datetime(2000,1,1)
     if end_date is None:
@@ -289,17 +336,19 @@ def update_graph(start_date, end_date, channel):
     pc_pie_title = f"Payment Cards Pie Chart"
 
     #Dataframe for bar chart
-    dff_LC = query()["df_LC"].copy()
+    dff_LC = df_LC.copy()
     dff_LC['Creation Date'] = pd.to_datetime(dff_LC['Creation Date'])
     dff_LC = dff_LC[(dff_LC['Creation Date']>=start_date) & (dff_LC['Creation Date']<=end_date)]
-    dff_LC = dff_LC[dff_LC["Channel"].isin(channel)]
+    if len(channel) != 0:
+        dff_LC = dff_LC[dff_LC["Channel"].isin(channel)]
     dff_LC = dff_LC.groupby(['Creation Date','Merchant']).sum().reset_index().sort_values('Merchant')
     
     #Dataframe for pie chart
-    dff_LC_PLL = query()["df_LC_PLL"].copy()
+    dff_LC_PLL = df_LC_PLL.copy()
     dff_LC_PLL['Creation Date'] = pd.to_datetime(dff_LC_PLL['Creation Date'])
     dff_LC_PLL = dff_LC_PLL[(dff_LC_PLL['Creation Date']>=start_date) & (dff_LC_PLL['Creation Date']<=end_date)]
-    dff_LC_PLL = dff_LC_PLL[dff_LC_PLL["Channel"].isin(channel)]
+    if len(channel) != 0:
+        dff_LC_PLL = dff_LC_PLL[dff_LC_PLL["Channel"].isin(channel)]
     dff_LC_PLL = dff_LC_PLL.groupby('Merchant').sum().reset_index().sort_values('Merchant')
 
     #Create Graphs for Loyalty Cards
@@ -322,13 +371,15 @@ def update_graph(start_date, end_date, channel):
     )
 
     #Create LC Headlines
-    LC_header = generate_headers(query()["df_LC_PLL_totals"])
+    LC_header = generate_headers(df_LC_PLL_totals)
 
     #Create Dataframes for User
     dff_UA = query()['df_UA'].copy()
     dff_UA['Creation Date'] = pd.to_datetime(dff_UA['Creation Date'])
     dff_UA = dff_UA[(dff_UA['Creation Date']>=start_date) & (dff_UA['Creation Date']<=end_date)]
-    dff_UA = dff_UA[dff_UA["Channel"].isin(channel)]
+    if len(channel) != 0:
+        dff_UA = dff_UA[dff_UA["Channel"].isin(channel)]
+    dff_UA = dff_UA.groupby(["Channel","Creation Date"]).sum().reset_index()
     
     #Create graphs for users
     fig_lin_ua = px.line(
@@ -341,13 +392,14 @@ def update_graph(start_date, end_date, channel):
         color_discrete_map=color_mapping)
 
     #Create User Headers
-    user_header = generate_headers(query()["total_user_headline"])
+    user_header = generate_headers(total_user_headline)
 
     #Create Dataframes for payment cards
-    dff_PC = query()["df_PC"].copy()
+    dff_PC = df_PC.copy()
     dff_PC['Creation Date'] = pd.to_datetime(dff_PC['Creation Date'])
     dff_PC = dff_PC[(dff_PC['Creation Date']>=start_date) & (dff_PC['Creation Date']<=end_date)]
-    dff_PC = dff_PC[dff_PC["Channel"].isin(channel)]
+    if len(channel) != 0:
+        dff_PC = dff_PC[dff_PC["Channel"].isin(channel)]
     dff_PC = dff_PC.groupby('Card Issuer').sum().reset_index()
 
     #Create pie chart for 
@@ -360,5 +412,7 @@ def update_graph(start_date, end_date, channel):
     )
 
     return lc_fig_bar, lc_fig_pie, lc_bar_title, lc_pie_title, fig_lin_ua, ua_line_title, pc_fig_pie, pc_pie_title, user_header, LC_header   #This is what is being returned to the outputs in the callbacks 2 outputs = 2 returns
+
+# %%
 
 # %%
