@@ -29,16 +29,16 @@ port = env.portref
 
 
 #====================Generate column with loop==============================
-def generate_headers(dict):
+def generate_headers(txn_dict):
     output = []
-    length = len(dict)
-    for key in dict:
+    length = len(txn_dict)
+    for key in txn_dict:
         output.append(dbc.Col(
             dbc.Card([
                 dbc.CardHeader(html.H4(f"{key}", className="text-center")),
                 dbc.CardBody(
                     [
-                        html.H4(f"£{dict[key]:,.2f}", className="text-center card-title")
+                        html.H4(f"£{txn_dict[key]:,.2f}", className="text-center card-title")
                         
                     ]
                 ),
@@ -148,7 +148,7 @@ layout = dbc.Container([
 
 
 @cache.cached(timeout=TIMEOUT)
-def query():
+def txn_query():
     #====================Export Transactions SQL Query==============================
 
     con_har = psycopg2.connect(
@@ -249,10 +249,10 @@ def query():
     df = pd.merge(df,testers,'left','user_id')
     df = df[df['email'].isna()]
     #====================Aggregate values and format==============================
-    avg_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'mean'}).to_dict()['spend_amount']
-    tv_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'sum'}).to_dict()['spend_amount']
+    avg_txn_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'mean'}).to_txn_dict()['spend_amount']
+    tv_txn_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'sum'}).to_txn_dict()['spend_amount']
     
-    return {"df":df,"avg_dict":avg_dict,"tv_dict":tv_dict}
+    return {"df":df,"avg_txn_dict":avg_txn_dict,"tv_txn_dict":tv_txn_dict}
 
 # ------------------------------------------------------------------------------
 # Connect the Plotly graphs with Dash Components
@@ -276,15 +276,15 @@ def update_graph(start_date, end_date):
     bar_title = f"Transactions by Day"
     active_user_title = f"Active Users by Month"
 
-    dict = query()
+    txn_dict = txn_query()
 
-    df = dict['df']
-    avg_dict = dict['avg_dict']
-    tv_dict = dict['tv_dict']
+    df = txn_dict['df']
+    avg_txn_dict = txn_dict['avg_txn_dict']
+    tv_txn_dict = txn_dict['tv_txn_dict']
 
     #Create headline numbers
-    avg_header = generate_headers(avg_dict)
-    tv_header = generate_headers(tv_dict)
+    avg_header = generate_headers(avg_txn_dict)
+    tv_header = generate_headers(tv_txn_dict)
 
     df_tr = df
     df_tr['transaction_date'] = pd.to_datetime(df_tr['transaction_date'])

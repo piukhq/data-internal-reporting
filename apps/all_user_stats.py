@@ -30,16 +30,16 @@ port = env.portref
 
 # %%
 #====================Generate column with loop==============================
-def generate_headers(dict):
+def generate_headers(user_dict):
     output = []
-    length = len(dict)
-    for key in dict:
+    length = len(user_dict)
+    for key in user_dict:
         output.append(dbc.Col(
             dbc.Card([
                 dbc.CardHeader(html.H5(f"{key}", className="text-center")),
                 dbc.CardBody(
                     [
-                        html.H3(f"{dict[key]}", className="text-center card-title")
+                        html.H3(f"{user_dict[key]}", className="text-center card-title")
                         
                     ]
                 ),
@@ -211,7 +211,7 @@ layout = dbc.Container([
 # ------------------------------------------------------------------------------
 # Connect the Plotly graphs with Dash Components
 @cache.cached(timeout=TIMEOUT)
-def query():
+def user_query():
 
     print("Cache Refresh complete")
 
@@ -309,14 +309,14 @@ def query():
 )
 def update_graph(start_date, end_date, channel):
 
-    dict = query()
+    user_dict = user_query()
 
-    df_LC = dict["df_LC"]
-    df_LC_PLL = dict["df_LC_PLL"]
-    df_UA = dict["df_UA"]
-    total_user_headline = dict["total_user_headline"]
-    df_PC = dict["df_PC"]
-    df_LC_PLL_totals = dict["df_LC_PLL_totals"]
+    df_LC = user_dict["df_LC"]
+    df_LC_PLL = user_dict["df_LC_PLL"]
+    df_UA = user_dict["df_UA"]
+    total_user_headline = user_dict["total_user_headline"]
+    df_PC = user_dict["df_PC"]
+    df_LC_PLL_totals = user_dict["df_LC_PLL_totals"]
 
     if start_date is None:
         start_date = datetime.datetime(2000,1,1)
@@ -374,7 +374,7 @@ def update_graph(start_date, end_date, channel):
     LC_header = generate_headers(df_LC_PLL_totals)
 
     #Create Dataframes for User
-    dff_UA = query()['df_UA'].copy()
+    dff_UA = df_UA.copy()
     dff_UA['Creation Date'] = pd.to_datetime(dff_UA['Creation Date'])
     dff_UA = dff_UA[(dff_UA['Creation Date']>=start_date) & (dff_UA['Creation Date']<=end_date)]
     if len(channel) != 0:
