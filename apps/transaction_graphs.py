@@ -13,114 +13,20 @@ import dash_bootstrap_components as dbc
 from supporting_files import env
 import psycopg2
 import datetime
+
+from app import cache
 from app import color_mapping
+from random import randint
+from flask_caching import Cache
+
+TIMEOUT = 60
 
 host = env.hostref
 user = env.usernameref
 password = env.passwordref
 port = env.portref
 
-#====================Export Transactions SQL Query==============================
 
-con_har = psycopg2.connect(
-    host=host,
-    database="harmonia",
-    user=user,
-    password=password,
-    port=port)
-
-sql = """
-    SELECT DISTINCT
-        id,
-        transaction_id,
-        feed_type,
-        transaction_date,
-        created_at,
-        provider_slug,
-        spend_amount,
-        loyalty_id,
-        user_id
-    FROM
-        export_transaction
-    WHERE
-        (provider_slug = \'squaremeal\' OR
-        provider_slug = \'iceland-bonus-card\' OR
-        provider_slug = \'bpl-asos\' OR
-        provider_slug = \'wasabi-club\') AND
-        status = \'EXPORTED\' AND
-        spend_amount > 0
-"""
-
-df_live = pd.read_sql(sql,con_har)
-max_arch = df_live['created_at'].min().strftime("%Y-%m-%d")
-df_live.drop(['created_at'],axis=1,inplace=True)
-
-con_har = psycopg2.connect(
-    host=host,
-    database="20220405_harmonia",
-    user=user,
-    password=password,
-    port=port)
-
-sql = f"""
-    SELECT DISTINCT
-        id,
-        transaction_id,
-        feed_type,
-        transaction_date,
-        provider_slug,
-        spend_amount,
-        loyalty_id,
-        user_id
-    FROM
-        export_transaction
-    WHERE
-        (provider_slug = \'squaremeal\' OR
-        provider_slug = \'iceland-bonus-card\' OR
-        provider_slug = \'bpl-asos\' OR
-        provider_slug = \'wasabi-club\') AND
-        status = \'EXPORTED\' AND
-        spend_amount > 0 AND
-        created_at < \'{max_arch}\'
-"""
-df_arch = pd.read_sql(sql,con_har)
-df_arch.head()
-
-df = pd.concat([df_live,df_arch])
-df['spend_amount'] = df['spend_amount']/100
-df.drop(df[df['feed_type']=='AUTH'].index, inplace=True)
-df.drop(['feed_type'],axis=1, inplace=True)
-df.replace({
-    'bpl-asos':'ASOS',
-    'iceland-bonus-card':'Iceland',
-    'squaremeal':'SquareMeal',
-    'wasabi-club':'Wasabi'},inplace=True)
-
-con_her = psycopg2.connect(
-    host=host,
-    database="hermes",
-    user=user,
-    password=password,
-    port=port)
-
-#====================Test Users SQL Query==============================
-
-sql = """
-    SELECT
-        id user_id,
-        email
-    FROM
-        \"user\"
-    WHERE
-        email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\'
-"""
-
-testers = pd.read_sql(sql,con_her)
-#====================Filter Testers==============================
-df = pd.merge(df,testers,'left','user_id')
-df = df[df['email'].isna()]
-#====================Aggregate values and format==============================
-avg_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'mean'}).to_dict()['spend_amount']
 
 #====================Generate column with loop==============================
 def generate_headers(dict):
@@ -128,35 +34,68 @@ def generate_headers(dict):
     length = len(dict)
     for key in dict:
         output.append(dbc.Col(
-                [
-                dbc.Row([html.H4(f"{key}",
-                className='text-center text-secondary, mb-4', style={'text-align': 'center'})]),
-                dbc.Row([html.H4(f"£{dict[key]:.2f}",
-                className='text-center text-info, mb-4', style={'text-align': 'center'})])
-                ], 
+            dbc.Card([
+                dbc.CardHeader(html.H4(f"{key}", className="text-center")),
+                dbc.CardBody(
+                    [
+                        html.H4(f"£{dict[key]:,.2f}", className="text-center card-title")
+                        
+                    ]
+                ),
+            ], color="dark", inverse=True),
                 xs=max(6,12/length), sm=max(6,12/length), md=max(6,12/length), lg=max(3,12/length), xl=max(3,12/length)))
     return output
 #%%
 # ------------------------------------------------------------------------------
 # App layout - everything in the dash goes in here including the HTML
 layout = dbc.Container([
-    # Title
     dbc.Row([
         dbc.Col(
                 [
-                html.H4(f"Average Transaction Amount",
-                className='text-center text-secondary, mb-4', style={'text-align': 'center'})
+                html.H4(f"Total Spend to Date",
+                id ="total_spend",
+                className='text-center text-secondary, mb-4', style={'text-align': 'center'}),
+                dbc.Tooltip(
+                    "Total Spend to Date: The total amount of all transactions exported by Bink. Should be noted that this just takes into account positive transactions and not refunds.",
+                    target="total_spend",
+                    placement="top"
+                )
                 ], 
             xs=12, sm=12, md=12, lg=6, xl=6),
         ], justify='around'),
-    # Headlines
     dbc.Row(
-        generate_headers(avg_dict)
+        id = "tv_headers",
+        children =[]
     ),
+    dbc.Row([
+        dbc.Col(
+                [
+                html.H4(f"Average Spend",
+                id ="avg_spend",
+                className='text-center text-secondary, mb-4', style={'text-align': 'center'}),
+                dbc.Tooltip(
+                    "Average Spend: The average spend amount per transaction. Should be noted that this just takes into account positive transactions and not refunds.",
+                    target="avg_spend",
+                    placement="top"
+                )
+                ], 
+            xs=12, sm=12, md=12, lg=6, xl=6),
+        ], justify='around'),
+    dbc.Row(
+        id = "avg_headers",
+        children =[]
+    ),
+    
     # Filter
     dbc.Row([
         dbc.Col(
-            [   html.H6("Select dates to filter graphs"),
+            [
+                html.H6("Select dates to filter graphs"),
+                dbc.Tooltip(
+                    "This date filter can be applied to filter the charts below. It does not currently also filter the headline numbers at the top of the page.",
+                    target="date_picker",
+                    placement="top"
+                ),
                 dcc.DatePickerRange(
                     id = 'date_picker',
                     month_format='MMMM Y',
@@ -180,6 +119,11 @@ layout = dbc.Container([
         dbc.Col(
             [
                 html.H4(id = 'bar_graph_title_txn', children=[]),
+                dbc.Tooltip(
+                    "",
+                    target="bar_graph_title_txn",
+                    placement="top"
+                ),
                 dcc.Graph(id='txn_by_merchant', figure={})
                 ]
                 , #width ={'size':6, 'offset':0,'order':1}
@@ -188,6 +132,11 @@ layout = dbc.Container([
         dbc.Col(
             [
                 html.H4(id = 'active_user_title', children=[]),
+                dbc.Tooltip(
+                    "Active users is a unique count of loyalty accounts for which we have exported transactions.",
+                    target="active_user_title",
+                    placement="top"
+                ),
                 dcc.Graph(id='active_user_bar', figure={})
                 ]
                 , #width ={'size':6, 'offset':0,'order':1}
@@ -198,15 +147,123 @@ layout = dbc.Container([
 
 
 
+@cache.cached(timeout=TIMEOUT)
+def query():
+    #====================Export Transactions SQL Query==============================
+
+    con_har = psycopg2.connect(
+        host=host,
+        database="harmonia",
+        user=user,
+        password=password,
+        port=port)
+
+    sql = """
+        SELECT DISTINCT
+            id,
+            transaction_id,
+            feed_type,
+            transaction_date,
+            created_at,
+            provider_slug,
+            spend_amount,
+            loyalty_id,
+            user_id
+        FROM
+            export_transaction
+        WHERE
+            (provider_slug = \'squaremeal\' OR
+            provider_slug = \'iceland-bonus-card\' OR
+            provider_slug = \'bpl-asos\' OR
+            provider_slug = \'wasabi-club\') AND
+            status = \'EXPORTED\' AND
+            spend_amount > 0
+    """
+
+    df_live = pd.read_sql(sql,con_har)
+    max_arch = df_live['created_at'].min().strftime("%Y-%m-%d")
+    df_live.drop(['created_at'],axis=1,inplace=True)
+
+    con_har = psycopg2.connect(
+        host=host,
+        database="20220405_harmonia",
+        user=user,
+        password=password,
+        port=port)
+
+    sql = f"""
+        SELECT DISTINCT
+            id,
+            transaction_id,
+            feed_type,
+            transaction_date,
+            provider_slug,
+            spend_amount,
+            loyalty_id,
+            user_id
+        FROM
+            export_transaction
+        WHERE
+            (provider_slug = \'squaremeal\' OR
+            provider_slug = \'iceland-bonus-card\' OR
+            provider_slug = \'bpl-asos\' OR
+            provider_slug = \'wasabi-club\') AND
+            status = \'EXPORTED\' AND
+            spend_amount > 0 AND
+            created_at < \'{max_arch}\'
+    """
+    df_arch = pd.read_sql(sql,con_har)
+    df_arch.head()
+
+    df = pd.concat([df_live,df_arch])
+    df['spend_amount'] = df['spend_amount']/100
+    df.drop(df[df['feed_type']=='AUTH'].index, inplace=True)
+    df.drop(['feed_type'],axis=1, inplace=True)
+    df.replace({
+        'bpl-asos':'ASOS',
+        'iceland-bonus-card':'Iceland',
+        'squaremeal':'SquareMeal',
+        'wasabi-club':'Wasabi'},inplace=True)
+
+    con_her = psycopg2.connect(
+        host=host,
+        database="hermes",
+        user=user,
+        password=password,
+        port=port)
+
+    #====================Test Users SQL Query==============================
+
+    sql = """
+        SELECT
+            id user_id,
+            email
+        FROM
+            \"user\"
+        WHERE
+            email LIKE \'%@bink%\' OR email LIKE \'%@testbink%\' OR email LIKE \'%@e2e.bink.com%\'
+    """
+
+    testers = pd.read_sql(sql,con_her)
+    #====================Filter Testers==============================
+    df = pd.merge(df,testers,'left','user_id')
+    df = df[df['email'].isna()]
+    #====================Aggregate values and format==============================
+    avg_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'mean'}).to_dict()['spend_amount']
+    tv_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'sum'}).to_dict()['spend_amount']
+    
+    return {"df":df,"avg_dict":avg_dict,"tv_dict":tv_dict}
+
 # ------------------------------------------------------------------------------
 # Connect the Plotly graphs with Dash Components
 @app.callback(
     [
-    #  Output(component_id='output_container_txn', component_property='children'),
      Output(component_id='txn_by_merchant', component_property='figure'),
      Output(component_id='bar_graph_title_txn', component_property='children'),
      Output(component_id='active_user_bar', component_property='figure'),
-     Output(component_id='active_user_title', component_property='children')
+     Output(component_id='active_user_title', component_property='children'),
+     Output(component_id='avg_headers', component_property='children'),
+     Output(component_id='tv_headers', component_property='children')
      ],
      [Input(component_id='date_picker', component_property='start_date'),
     Input(component_id='date_picker', component_property='end_date')]
@@ -216,9 +273,18 @@ def update_graph(start_date, end_date):
         start_date = datetime.datetime(2000,1,1)
     if end_date is None:
         end_date = datetime.datetime(2200,1,1)
-    # container = f"The year chosen by user was: {option_slctd}"
     bar_title = f"Transactions by Day"
     active_user_title = f"Active Users by Month"
+
+    dict = query()
+
+    df = dict['df']
+    avg_dict = dict['avg_dict']
+    tv_dict = dict['tv_dict']
+
+    #Create headline numbers
+    avg_header = generate_headers(avg_dict)
+    tv_header = generate_headers(tv_dict)
 
     df_tr = df
     df_tr['transaction_date'] = pd.to_datetime(df_tr['transaction_date'])
@@ -255,14 +321,5 @@ def update_graph(start_date, end_date):
         template='plotly_dark',
         color_discrete_map=color_mapping
     )
-
-    # Trialing hover templates to clean up formatting
-    # fig_bar.update_layout(
-    #     hoverlabel=dict(
-    #         bgcolor="white",
-    #         font_size=16,
-    #         font_family="Rockwell"
-    #     )
-    # )
     
-    return fig_bar, bar_title, fig_bar_active, active_user_title #This is what is being returned to the outputs in the callbacks 2 outputs = 2 returns
+    return fig_bar, bar_title, fig_bar_active, active_user_title, avg_header, tv_header #This is what is being returned to the outputs in the callbacks 2 outputs = 2 returns
