@@ -132,6 +132,7 @@ layout = dbc.Container([
                     options=[
                         {"label": "Barclays", "value": "Barclays Mobile Banking"},
                         {"label": "Bink", "value": "Bink"}],
+                    placeholder='No channel filter selected - all data showing',
                     multi=True,
                     value=["Barclays Mobile Banking", "Bink"],
                     style={
@@ -210,10 +211,10 @@ layout = dbc.Container([
 
 # ------------------------------------------------------------------------------
 # Connect the Plotly graphs with Dash Components
-@cache.cached(timeout=TIMEOUT)
+@cache.cached(timeout=TIMEOUT, key_prefix='user')
 def user_query():
 
-    print("Cache Refresh complete")
+    print("User cache refresh in progress")
 
     #====================User SQL query===================================
     df_UA = pd.read_sql("""SELECT COUNT(DISTINCT (CASE WHEN ca.name = 'Barclays Mobile Banking' THEN u.external_id::varchar WHEN ca.name = 'Bink' THEN u.id::varchar END)) "Total User Count", DATE(u.date_joined) "Creation Date", ca.name "Channel", ((ca.name = 'Barclays Mobile Banking' AND (usc.user_id IS NOT NULL)) OR ca.name = 'Bink') "Consented"
@@ -284,7 +285,7 @@ def user_query():
     #Create dataframe for LC Pie Chart
     df_LC_PLL = df_LC[(df_LC['PLL Ready']==True)&(df_LC['Active']==True)].sort_values('Merchant')
 
-    print("Cache Refresh complete")
+    print("User cache refresh complete")
 
     return {"df_UA": df_UA, "total_user_headline": total_user_headline, "df_PC": df_PC,"df_LC": df_LC, "df_LC_PLL_totals": df_LC_PLL_totals, "df_LC_PLL": df_LC_PLL}
 
@@ -307,16 +308,16 @@ def user_query():
     Input(component_id='slct_channel', component_property='value')
     ]
 )
-def update_graph(start_date, end_date, channel):
+def user_update_graph(start_date, end_date, channel):
 
     user_dict = user_query()
 
-    df_LC = user_dict["df_LC"]
-    df_LC_PLL = user_dict["df_LC_PLL"]
-    df_UA = user_dict["df_UA"]
-    total_user_headline = user_dict["total_user_headline"]
-    df_PC = user_dict["df_PC"]
-    df_LC_PLL_totals = user_dict["df_LC_PLL_totals"]
+    df_LC = user_dict["df_LC"].copy()
+    df_LC_PLL = user_dict["df_LC_PLL"].copy()
+    df_UA = user_dict["df_UA"].copy()
+    total_user_headline = user_dict["total_user_headline"].copy()
+    df_PC = user_dict["df_PC"].copy()
+    df_LC_PLL_totals = user_dict["df_LC_PLL_totals"].copy()
 
     if start_date is None:
         start_date = datetime.datetime(2000,1,1)
@@ -336,7 +337,7 @@ def update_graph(start_date, end_date, channel):
     pc_pie_title = f"Payment Cards Pie Chart"
 
     #Dataframe for bar chart
-    dff_LC = df_LC.copy()
+    dff_LC = df_LC
     dff_LC['Creation Date'] = pd.to_datetime(dff_LC['Creation Date'])
     dff_LC = dff_LC[(dff_LC['Creation Date']>=start_date) & (dff_LC['Creation Date']<=end_date)]
     if len(channel) != 0:
@@ -344,7 +345,7 @@ def update_graph(start_date, end_date, channel):
     dff_LC = dff_LC.groupby(['Creation Date','Merchant']).sum().reset_index().sort_values('Merchant')
     
     #Dataframe for pie chart
-    dff_LC_PLL = df_LC_PLL.copy()
+    dff_LC_PLL = df_LC_PLL
     dff_LC_PLL['Creation Date'] = pd.to_datetime(dff_LC_PLL['Creation Date'])
     dff_LC_PLL = dff_LC_PLL[(dff_LC_PLL['Creation Date']>=start_date) & (dff_LC_PLL['Creation Date']<=end_date)]
     if len(channel) != 0:
@@ -374,7 +375,7 @@ def update_graph(start_date, end_date, channel):
     LC_header = generate_headers(df_LC_PLL_totals)
 
     #Create Dataframes for User
-    dff_UA = df_UA.copy()
+    dff_UA = df_UA
     dff_UA['Creation Date'] = pd.to_datetime(dff_UA['Creation Date'])
     dff_UA = dff_UA[(dff_UA['Creation Date']>=start_date) & (dff_UA['Creation Date']<=end_date)]
     if len(channel) != 0:
@@ -395,7 +396,7 @@ def update_graph(start_date, end_date, channel):
     user_header = generate_headers(total_user_headline)
 
     #Create Dataframes for payment cards
-    dff_PC = df_PC.copy()
+    dff_PC = df_PC
     dff_PC['Creation Date'] = pd.to_datetime(dff_PC['Creation Date'])
     dff_PC = dff_PC[(dff_PC['Creation Date']>=start_date) & (dff_PC['Creation Date']<=end_date)]
     if len(channel) != 0:

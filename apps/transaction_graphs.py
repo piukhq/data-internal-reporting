@@ -147,8 +147,10 @@ layout = dbc.Container([
 
 
 
-@cache.cached(timeout=TIMEOUT)
+@cache.cached(timeout=TIMEOUT, key_prefix='txn')
 def txn_query():
+
+    print("txn cache in progress")
     #====================Export Transactions SQL Query==============================
 
     con_har = psycopg2.connect(
@@ -249,9 +251,11 @@ def txn_query():
     df = pd.merge(df,testers,'left','user_id')
     df = df[df['email'].isna()]
     #====================Aggregate values and format==============================
-    avg_txn_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'mean'}).to_txn_dict()['spend_amount']
-    tv_txn_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'sum'}).to_txn_dict()['spend_amount']
-    
+    avg_txn_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'mean'}).to_dict()['spend_amount']
+    tv_txn_dict = df.groupby(['provider_slug']).aggregate({'spend_amount':'sum'}).to_dict()['spend_amount']
+
+    print("txn cache complete")
+
     return {"df":df,"avg_txn_dict":avg_txn_dict,"tv_txn_dict":tv_txn_dict}
 
 # ------------------------------------------------------------------------------
@@ -278,9 +282,9 @@ def update_graph(start_date, end_date):
 
     txn_dict = txn_query()
 
-    df = txn_dict['df']
-    avg_txn_dict = txn_dict['avg_txn_dict']
-    tv_txn_dict = txn_dict['tv_txn_dict']
+    df = txn_dict['df'].copy()
+    avg_txn_dict = txn_dict['avg_txn_dict'].copy()
+    tv_txn_dict = txn_dict['tv_txn_dict'].copy()
 
     #Create headline numbers
     avg_header = generate_headers(avg_txn_dict)

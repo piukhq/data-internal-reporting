@@ -44,6 +44,7 @@ def display_page(pathname):
         return all_user_stats.layout
     else:
         return all_user_stats.layout
+    print("call back hit")
 
 if __name__ == '__main__':
     app.run_server(debug=True)
