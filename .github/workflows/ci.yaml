@@ -1,0 +1,9 @@
+name: ci
+
+on:
+  push:
+    branches: [ develop, master, CI_creation ]
+  pull_request:
+    branches: [ develop, master ]
+  release:
+    types: [ published ]
