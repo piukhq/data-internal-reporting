@@ -10,7 +10,7 @@ on:
 
 jobs:
   create_dev_release:
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     name: create_dev_release
     runs-on: ubuntu-latest
     steps:
