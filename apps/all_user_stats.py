@@ -1,6 +1,7 @@
 #%%
 import datetime
 import logging
+import os
 from random import randint
 from socket import timeout
 from turtle import left, width
@@ -16,14 +17,9 @@ from dash.dependencies import Input, Output  # pip install dash (version 2.0.0 o
 from flask_caching import Cache
 
 from app import app, cache, color_mapping
-from supporting_files import env
+
 
 TIMEOUT = 60
-
-host = env.hostref
-user = env.usernameref
-password = env.passwordref
-port = env.portref
 
 # %%
 # ====================Generate column with loop==============================
@@ -263,7 +259,7 @@ layout = dbc.Container(
 def con_db(database):
     try:
         logging.info("Opening DataBase connection")
-        connection = psycopg2.connect(host=host, database=database, user=user, password=password, port=port)
+        connection = psycopg2.connect(os.getenv("POSTGRES_DSN").format(database))
         logging.info("Database connected")
         return connection
     except (psycopg2.DatabaseError) as error:

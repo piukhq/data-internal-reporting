@@ -7,5 +7,5 @@ RUN apt-get update && apt-get -y install libtk8.6
 RUN pipenv install --system --deploy --ignore-pipfile
 
 
-# ENTRYPOINT [ "linkerd-await", "--" ]
+ENTRYPOINT [ "linkerd-await", "--" ]
 CMD [ "python3", "index.py" ]
