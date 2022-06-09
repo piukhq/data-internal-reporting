@@ -2,6 +2,7 @@ import dash
 import dash_bootstrap_components as dbc
 from flask import Flask
 from flask_caching import Cache
+import os
 
 # https://www.bootstrapcdn.com/bootswatch/   ---- THIS IS A BOOTSTRAP STYLING PAGE
 # https://hackerthemes.com/bootstrap-cheatsheet/  ---- THIS IS A BOOTSTRAP CHEATSHEET
@@ -31,7 +32,7 @@ cache = Cache(
     config={
         # try 'filesystem' if you don't want to setup redis
         "CACHE_TYPE": "RedisCache",
-        "REDIS URL": "redis://localhost:6379",
+        "REDIS URL": os.getenv("REDIS_URL", "redis://localhost:6379"),
     },
 )
 
