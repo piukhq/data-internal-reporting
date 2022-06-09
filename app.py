@@ -31,8 +31,8 @@ cache = Cache(
     app.server,
     config={
         # try 'filesystem' if you don't want to setup redis
-        "CACHE_TYPE": "RedisCache",
-        "REDIS URL": os.getenv("REDIS_URL", "redis://localhost:6379"),
+        "CACHE_TYPE": "redis",
+        "CACHE_REDIS_URL": os.getenv("REDIS_URL", "redis://localhost:6379"),
     },
 )
 
