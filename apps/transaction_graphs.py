@@ -217,36 +217,37 @@ def txn_query():
     """
 
     df_live = pd.read_sql(sql, con_har)
-    max_arch = df_live["created_at"].min().strftime("%Y-%m-%d")
+    # max_arch = df_live["created_at"].min().strftime("%Y-%m-%d")
     df_live.drop(["created_at"], axis=1, inplace=True)
 
-    con_har = con_db("20220405_harmonia")
+    # con_har = con_db("20220405_harmonia")
 
-    sql = f"""
-        SELECT DISTINCT
-            id,
-            transaction_id,
-            feed_type,
-            transaction_date,
-            provider_slug,
-            spend_amount,
-            loyalty_id,
-            user_id
-        FROM
-            export_transaction
-        WHERE
-            (provider_slug = \'squaremeal\' OR
-            provider_slug = \'iceland-bonus-card\' OR
-            provider_slug = \'bpl-asos\' OR
-            provider_slug = \'wasabi-club\') AND
-            status = \'EXPORTED\' AND
-            spend_amount > 0 AND
-            created_at < \'{max_arch}\'
-    """
-    df_arch = pd.read_sql(sql, con_har)
-    df_arch.head()
+    # sql = f"""
+    #     SELECT DISTINCT
+    #         id,
+    #         transaction_id,
+    #         feed_type,
+    #         transaction_date,
+    #         provider_slug,
+    #         spend_amount,
+    #         loyalty_id,
+    #         user_id
+    #     FROM
+    #         export_transaction
+    #     WHERE
+    #         (provider_slug = \'squaremeal\' OR
+    #         provider_slug = \'iceland-bonus-card\' OR
+    #         provider_slug = \'bpl-asos\' OR
+    #         provider_slug = \'wasabi-club\') AND
+    #         status = \'EXPORTED\' AND
+    #         spend_amount > 0 AND
+    #         created_at < \'{max_arch}\'
+    # """
+    # df_arch = pd.read_sql(sql, con_har)
+    # df_arch.head()
 
-    df = pd.concat([df_live, df_arch])
+    # df = pd.concat([df_live, df_arch])
+    df = df_live
     df["spend_amount"] = df["spend_amount"] / 100
     df.drop(df[df["feed_type"] == "AUTH"].index, inplace=True)
     df.drop(["feed_type"], axis=1, inplace=True)
